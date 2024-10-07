@@ -5,10 +5,10 @@ local LocalPlayer = Players.LocalPlayer
 
 local ESP_Settings = {
     Box_Color = Color3.fromRGB(255, 255, 255),
-    BoxEsp = true,
+    BoxEsp = false,
     BoxFill = false,
     Box_Fill_Color = Color3.fromRGB(255, 255, 255),
-    NameEsp = false,
+    NameEsp = true,
     Name_Color = Color3.fromRGB(255, 255, 255),
     Font = 2,
     Font_Size = 10,
@@ -50,79 +50,7 @@ local function NewText(color, size, font)
     return text
 end
 
-local function CreateSkeletonESP(player)
-    local skeletonLines = {}
-    local partsToConnect = {
-        {"Head", "UpperTorso"},
-        {"UpperTorso", "LowerTorso"},
-        {"UpperTorso", "LeftUpperArm"},
-        {"LeftUpperArm", "LeftLowerArm"},
-        {"LeftLowerArm", "LeftHand"},
-        {"UpperTorso", "RightUpperArm"},
-        {"RightUpperArm", "RightLowerArm"},
-        {"RightLowerArm", "RightHand"},
-        {"LowerTorso", "LeftUpperLeg"},
-        {"LeftUpperLeg", "LeftLowerLeg"},
-        {"LeftLowerLeg", "LeftFoot"},
-        {"LowerTorso", "RightUpperLeg"},
-        {"RightUpperLeg", "RightLowerLeg"},
-        {"RightLowerLeg", "RightFoot"}
-    }
-
-    for _, pair in ipairs(partsToConnect) do
-        table.insert(skeletonLines, NewLine(ESP_Settings.Skeleton_Thickness, ESP_Settings.Skeleton_Color))
-    end
-
-    local function UpdateSkeleton()
-        for i, line in ipairs(skeletonLines) do
-            local fromPart = player.Character:FindFirstChild(partsToConnect[i][1])
-            local toPart = player.Character:FindFirstChild(partsToConnect[i][2])
-
-            if fromPart and toPart then
-                local fromPos = Camera:WorldToViewportPoint(fromPart.Position)
-                local toPos = Camera:WorldToViewportPoint(toPart.Position)
-
-                line.From = Vector2.new(fromPos.X, fromPos.Y)
-                line.To = Vector2.new(toPos.X, toPos.Y)
-                line.Visible = true
-            else
-                line.Visible = false
-            end
-        end
-    end
-
-    return UpdateSkeleton
-end
-
-local function CreateWeaponESP(player)
-    local weaponText = NewText(ESP_Settings.Weapon_Color, ESP_Settings.Weapon_Font_Size, ESP_Settings.Font)
-
-    local function UpdateWeapon()
-        if player.Character then
-            local tool = player.Character:FindFirstChildOfClass("Tool")
-            if tool and ESP_Settings.WeaponEsp then
-                local rootPos = player.Character.HumanoidRootPart.Position
-                local screenPos, onScreen = Camera:WorldToViewportPoint(rootPos)
-
-                if onScreen then
-                    weaponText.Position = Vector2.new(screenPos.X, screenPos.Y - 50)
-                    weaponText.Text = "Holding: " .. tool.Name
-                    weaponText.Visible = true
-                else
-                    weaponText.Visible = false
-                end
-            else
-                weaponText.Visible = false
-            end
-        else
-            weaponText.Visible = false
-        end
-    end
-
-    return UpdateWeapon, weaponText
-end
-
-local function CreateBoxESP(player)
+local function CreateESPComponents(player)
     local lines = {
         top = NewLine(1, ESP_Settings.Box_Color),
         bottom = NewLine(1, ESP_Settings.Box_Color),
@@ -138,110 +66,103 @@ local function CreateBoxESP(player)
     }
 
     local fill = NewQuad(ESP_Settings.Box_Fill_Color, 0.5)
-
     local nameESP = NewText(ESP_Settings.Name_Color, ESP_Settings.Font_Size, ESP_Settings.Font)
 
-    local UpdateSkeleton = CreateSkeletonESP(player)
-    local UpdateWeapon, weaponESP = CreateWeaponESP(player)
+    return lines, outlines, fill, nameESP
+end
 
-    local function Update()
-        local connection
-        connection = RunService.RenderStepped:Connect(function()
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and ESP_Settings.BoxEsp then
-                local rootPos = player.Character.HumanoidRootPart.Position
-                local distance = (rootPos - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+local function UpdateESP(lines, outlines, fill, nameESP, player)
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local rootPos = player.Character.HumanoidRootPart.Position
+        local distance = (rootPos - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+        
+        if distance <= ESP_Settings.MaxDistance then
+            local rootScreenPos, onScreen = Camera:WorldToViewportPoint(rootPos)
+            if onScreen then
+                local headPos = Camera:WorldToViewportPoint(player.Character.Head.Position)
+                local legPos = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position - Vector3.new(0, 3, 0))
+
+                local boxHeight = (headPos - legPos).Magnitude * 1.5
+                local boxWidth = boxHeight / 2 * 1.3
+
+                lines.top.From = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
+                lines.top.To = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
+
+                lines.bottom.From = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
+                lines.bottom.To = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
+
+                lines.left.From = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
+                lines.left.To = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
+
+                lines.right.From = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
+                lines.right.To = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
+
+                outlines.top.From = Vector2.new(rootScreenPos.X - boxWidth / 2 - 1, rootScreenPos.Y - boxHeight / 2 - 1)
+                outlines.top.To = Vector2.new(rootScreenPos.X + boxWidth / 2 + 1, rootScreenPos.Y - boxHeight / 2 - 1)
+
+                outlines.bottom.From = Vector2.new(rootScreenPos.X - boxWidth / 2 - 1, rootScreenPos.Y + boxHeight / 2 + 1)
+                outlines.bottom.To = Vector2.new(rootScreenPos.X + boxWidth / 2 + 1, rootScreenPos.Y + boxHeight / 2 + 1)
+
+                outlines.left.From = Vector2.new(rootScreenPos.X - boxWidth / 2 - 1, rootScreenPos.Y - boxHeight / 2 - 1)
+                outlines.left.To = Vector2.new(rootScreenPos.X - boxWidth / 2 - 1, rootScreenPos.Y + boxHeight / 2 + 1)
+
+                outlines.right.From = Vector2.new(rootScreenPos.X + boxWidth / 2 + 1, rootScreenPos.Y - boxHeight / 2 - 1)
+                outlines.right.To = Vector2.new(rootScreenPos.X + boxWidth / 2 + 1, rootScreenPos.Y + boxHeight / 2 + 1)
+
+                fill.PointA = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
+                fill.PointB = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
+                fill.PointC = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
+                fill.PointD = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
+
+                nameESP.Position = Vector2.new(rootScreenPos.X, rootScreenPos.Y - boxHeight / 2 - 15)
+                nameESP.Text = player.Name
                 
-                if distance <= ESP_Settings.MaxDistance then
-                    local rootScreenPos, onScreen = Camera:WorldToViewportPoint(rootPos)
-                    if onScreen then
-                        local headPos = Camera:WorldToViewportPoint(player.Character.Head.Position)
-                        local legPos = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position - Vector3.new(0, 3, 0))
-
-                        local boxHeight = (headPos - legPos).Magnitude * 1.5
-                        local boxWidth = boxHeight / 2 * 1.3
-
-                        lines.top.From = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
-                        lines.top.To = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
-
-                        lines.bottom.From = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
-                        lines.bottom.To = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
-
-                        lines.left.From = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
-                        lines.left.To = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
-
-                        lines.right.From = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
-                        lines.right.To = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
-
-                        outlines.top.From = Vector2.new(rootScreenPos.X - boxWidth / 2 - 1, rootScreenPos.Y - boxHeight / 2 - 1)
-                        outlines.top.To = Vector2.new(rootScreenPos.X + boxWidth / 2 + 1, rootScreenPos.Y - boxHeight / 2 - 1)
-
-                        outlines.bottom.From = Vector2.new(rootScreenPos.X - boxWidth / 2 - 1, rootScreenPos.Y + boxHeight / 2 + 1)
-                        outlines.bottom.To = Vector2.new(rootScreenPos.X + boxWidth / 2 + 1, rootScreenPos.Y + boxHeight / 2 + 1)
-
-                        outlines.left.From = Vector2.new(rootScreenPos.X - boxWidth / 2 - 1, rootScreenPos.Y - boxHeight / 2 - 1)
-                        outlines.left.To = Vector2.new(rootScreenPos.X - boxWidth / 2 - 1, rootScreenPos.Y + boxHeight / 2 + 1)
-
-                        outlines.right.From = Vector2.new(rootScreenPos.X + boxWidth / 2 + 1, rootScreenPos.Y - boxHeight / 2 - 1)
-                        outlines.right.To = Vector2.new(rootScreenPos.X + boxWidth / 2 + 1, rootScreenPos.Y + boxHeight / 2 + 1)
-
-                        fill.PointA = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
-                        fill.PointB = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y - boxHeight / 2)
-                        fill.PointC = Vector2.new(rootScreenPos.X + boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
-                        fill.PointD = Vector2.new(rootScreenPos.X - boxWidth / 2, rootScreenPos.Y + boxHeight / 2)
-
-                        nameESP.Position = Vector2.new(rootScreenPos.X, rootScreenPos.Y - boxHeight / 2 - 15)
-                        nameESP.Text = player.Name
-                        nameESP.Visible = ESP_Settings.NameEsp
-                        fill.Visible = ESP_Settings.BoxFill
-                        
-                        for _, line in pairs(lines) do
-                            line.Visible = true
-                        end
-
-                        for _, line in pairs(outlines) do
-                            line.Visible = true
-                        end
-                    else
-                        for _, line in pairs(lines) do
-                            line.Visible = false
-                        end
-
-                        for _, line in pairs(outlines) do
-                            line.Visible = false
-                        end
-
-                        fill.Visible = false
-                        nameESP.Visible = false
-                    end
-                else
-                    for _, line in pairs(lines) do
-                        line.Visible = false
-                    end
-
-                    for _, line in pairs(outlines) do
-                        line.Visible = false
-                    end
-
-                    fill.Visible = false
-                    nameESP.Visible = false
-                end
+                lines.top.Visible = true
+                lines.bottom.Visible = true
+                lines.left.Visible = true
+                lines.right.Visible = true
+                outlines.top.Visible = true
+                outlines.bottom.Visible = true
+                outlines.left.Visible = true
+                outlines.right.Visible = true
+                fill.Visible = ESP_Settings.BoxFill
+                nameESP.Visible = ESP_Settings.NameEsp
             else
-                for _, line in pairs(lines) do
-                    line.Visible = false
-                end
-
-                for _, line in pairs(outlines) do
-                    line.Visible = false
-                end
-
+                lines.top.Visible = false
+                lines.bottom.Visible = false
+                lines.left.Visible = false
+                lines.right.Visible = false
+                outlines.top.Visible = false
+                outlines.bottom.Visible = false
+                outlines.left.Visible = false
+                outlines.right.Visible = false
                 fill.Visible = false
                 nameESP.Visible = false
-                connection:Disconnect()
             end
-        end)
+        else
+            lines.top.Visible = false
+            lines.bottom.Visible = false
+            lines.left.Visible = false
+            lines.right.Visible = false
+            outlines.top.Visible = false
+            outlines.bottom.Visible = false
+            outlines.left.Visible = false
+            outlines.right.Visible = false
+            fill.Visible = false
+            nameESP.Visible = false
+        end
+    else
+        lines.top.Visible = false
+        lines.bottom.Visible = false
+        lines.left.Visible = false
+        lines.right.Visible = false
+        outlines.top.Visible = false
+        outlines.bottom.Visible = false
+        outlines.left.Visible = false
+        outlines.right.Visible = false
+        fill.Visible = false
+        nameESP.Visible = false
     end
-
-    return Update
 end
 
 local espConnections = {}
@@ -249,23 +170,37 @@ local espConnections = {}
 local function ESP()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            espConnections[player] = CreateBoxESP(player)
-            espConnections[player]()
+            if not espConnections[player] then
+                local lines, outlines, fill, nameESP = CreateESPComponents(player)
+                espConnections[player] = {lines, outlines, fill, nameESP}
+            end
+            
+            local lines, outlines, fill, nameESP = unpack(espConnections[player])
+            UpdateESP(lines, outlines, fill, nameESP, player)
         end
     end
 end
 
 Players.PlayerAdded:Connect(function(player)
-    espConnections[player] = CreateBoxESP(player)
+    espConnections[player] = nil
 end)
 
 Players.PlayerRemoving:Connect(function(player)
     if espConnections[player] then
-        espConnections[player]:Disconnect()
+        local lines, outlines, fill, nameESP = unpack(espConnections[player])
+        lines.top:Remove()
+        lines.bottom:Remove()
+        lines.left:Remove()
+        lines.right:Remove()
+        outlines.top:Remove()
+        outlines.bottom:Remove()
+        outlines.left:Remove()
+        outlines.right:Remove()
+        fill:Remove()
+        nameESP:Remove()
+        
         espConnections[player] = nil
     end
 end)
 
-RunService.RenderStepped:Connect(function()
-    ESP()
-end)
+RunService.RenderStepped:Connect(ESP)
