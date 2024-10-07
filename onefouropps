@@ -58,7 +58,7 @@ do
 	function library:Window(windowInfo)
 		-- // Variables
 		local info = windowInfo or {}
-		local window = {Pages = {}, Dragging = true, Delta = UDim2.new(), Delta2 = Vector3.new()}
+		local window = {Pages = {}, Dragging = false, Delta = UDim2.new(), Delta2 = Vector3.new()}
 		-- // Utilisation
 		local screen = utility:Create({Type = "ScreenGui", Properties = {
 			Parent = cre,
