@@ -5,18 +5,18 @@ local LocalPlayer = Players.LocalPlayer
 
 local ESP_Settings = {
     Box_Color = Color3.fromRGB(255, 255, 255),
-    BoxEsp = false,
-    BoxFill = false,
+    BoxEsp = false, -- Disable Box ESP
+    BoxFill = false, -- Disable Box Fill
     Box_Fill_Color = Color3.fromRGB(255, 255, 255),
-    NameEsp = false,
+    NameEsp = false, -- Disable Name ESP
     Name_Color = Color3.fromRGB(255, 255, 255),
     Font = 2,
     Font_Size = 10,
     MaxDistance = 200,
-    SkeletonEsp = false,
+    SkeletonEsp = false, -- Disable Skeleton ESP
     Skeleton_Color = Color3.fromRGB(255, 255, 255),
     Skeleton_Thickness = 1,
-    WeaponEsp = false,
+    WeaponEsp = false, -- Disable Weapon ESP
     Weapon_Color = Color3.fromRGB(255, 255, 255),
     Weapon_Font_Size = 14
 }
@@ -117,14 +117,14 @@ local function UpdateESP(lines, outlines, fill, nameESP, player)
                 nameESP.Position = Vector2.new(rootScreenPos.X, rootScreenPos.Y - boxHeight / 2 - 15)
                 nameESP.Text = player.Name
                 
-                lines.top.Visible = true
-                lines.bottom.Visible = true
-                lines.left.Visible = true
-                lines.right.Visible = true
-                outlines.top.Visible = true
-                outlines.bottom.Visible = true
-                outlines.left.Visible = true
-                outlines.right.Visible = true
+                lines.top.Visible = ESP_Settings.BoxEsp
+                lines.bottom.Visible = ESP_Settings.BoxEsp
+                lines.left.Visible = ESP_Settings.BoxEsp
+                lines.right.Visible = ESP_Settings.BoxEsp
+                outlines.top.Visible = ESP_Settings.BoxEsp
+                outlines.bottom.Visible = ESP_Settings.BoxEsp
+                outlines.left.Visible = ESP_Settings.BoxEsp
+                outlines.right.Visible = ESP_Settings.BoxEsp
                 fill.Visible = ESP_Settings.BoxFill
                 nameESP.Visible = ESP_Settings.NameEsp
             else
